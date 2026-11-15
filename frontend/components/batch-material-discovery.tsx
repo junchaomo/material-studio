@@ -1,0 +1,14 @@
+"use client";
+import {useRef,useState} from 'react';
+import type {Task} from '../../shared/platform.ts';
+type Props={projectId:string;sourceAssetId:string;tasks:Task[];disabled:boolean;request:(path:string,body?:any)=>Promise<Response>;refresh:()=>Promise<void>};
+export default function BatchMaterialDiscovery({projectId,sourceAssetId,tasks,disabled,request,refresh}:Props){
+ const dialog=useRef<HTMLDialogElement>(null),lock=useRef(false),requestId=useRef('');const [busy,setBusy]=useState(false),[error,setError]=useState('');
+ const batch=tasks.filter(t=>t.kind==='discovery'&&t.source_asset_id===sourceAssetId).sort((a,b)=>b.created_at.localeCompare(a.created_at))[0];
+ const running=!!batch&&['queued','processing'].includes(batch.status);
+ const send=async(stop=false)=>{if(lock.current)return;lock.current=true;setBusy(true);setError('');try{await request(stop?'/api/materials/discovery/cancel':'/api/materials/discover',stop?{projectId,taskId:batch?.id}:{projectId,sourceAssetId,requestId:requestId.current,acknowledgeCost:true,discoveryTiles:2});dialog.current?.close();await refresh();}catch(e){setError((e as Error).message);}finally{setBusy(false);lock.current=false;}};
+ return <div className="batch-discovery"><button className="batch-start" disabled={disabled||busy||running} onClick={()=>{requestId.current=crypto.randomUUID();setError('');dialog.current?.showModal();}}>一键识别所有材质</button>
+ {batch&&<details className="batch-progress"><summary><span className={running?'batch-dot running':'batch-dot'}/>{running?'正在自动提取': '批量处理已结束'}<span className="batch-detail-label">查看详情</span></summary><div className="batch-progress-body"><p>按图中可可靠识别的材质处理，不设固定数量；生成结果需检查后入库。</p>{(batch.result?.items||[]).map((item:any,i:number)=><div key={i}>{item.name} · {item.stage}{item.diagnostics?.length>0&&<details><summary>查看处理详情</summary>{item.diagnostics.map((d:any,j:number)=><span key={j} style={{display:"block"}}>{d.stage}：{d.reason}</span>)}</details>}</div>)}{batch.error_message&&<p role="alert">{batch.error_message}</p>}{running&&<button disabled={busy||!!(batch as any).cancelRequested} onClick={()=>send(true)}>停止后续处理</button>}</div></details>}
+ {error&&<p role="alert">{error}</p>}
+ <dialog ref={dialog} style={{position:'fixed',inset:0,margin:'auto',maxWidth:480,width:'calc(100% - 40px)',border:'1px solid #dce2ef',borderRadius:20,padding:28}}><h2>一键提取图中材质</h2><p>将完整原图切成 2×2 分块分别发现材质区域，再自动识别选区、挑选有效取样区、矫正透视、识别材质并生成贴图。</p><p>区域发现按 2×2 分块调用 4 次（相邻块略有重叠，跨块的材质仍可识别），同一材质只保留一条；每种材质随后最多调用两次 AI。数量越多，用量越多；仍受各类模型剩余额度限制，失败也可能计费。</p><p>依据不足的项目会留待调整，其余继续处理。可以停止后续步骤；已经提交的调用仍可能完成。结果不会自动入库。</p>{error&&<p role="alert">{error}</p>}<div style={{display:'flex',justifyContent:'flex-end',gap:12}}><button disabled={busy} onClick={()=>dialog.current?.close()}>取消</button><button disabled={busy} onClick={()=>send()}>开始自动提取</button></div></dialog></div>;
+}

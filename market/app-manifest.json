@@ -1,0 +1,66 @@
+{
+  "schema": "jg-market-app/1",
+  "id": "jg-material-studio",
+  "name": "材质提取",
+  "fullName": "AI 材质提取 · 建筑材质识别与纹理重绘",
+  "version": "0.1.1",
+  "dept": "数字化中心",
+  "category": "建筑专业 / 图像与材质",
+  "tagline": "把效果图里的质感，变成可复用的材质贴图",
+  "desc": "面向建筑、景观与室内效果图的材质提取工具：在图上框选一块材质，自动识别材质类别与纹理特征，做透视矫正，并重绘成可平铺的无缝贴图，可按项目归档成材质库。支持一键识别整张图的候选材质区域；材质识别与区域发现的模型由企业内部中枢统一提供，用户不需要配置接口地址或密钥。",
+  "usage": "适用互联网办公网；安装在员工本机运行（图像处理在本机完成，原图不上传到中枢）。按组织与角色授权使用，材质成果保存在本机 local-data 目录，可由项目负责人导出归档。",
+  "nets": [
+    "inet"
+  ],
+  "entry": {
+    "appUrl": "http://127.0.0.1:4173/app",
+    "apiBase": "http://127.0.0.1:4191",
+    "healthCheck": "http://127.0.0.1:4191/api/health",
+    "launch": "node scripts/launch-local.mjs（或插件 plugin/index.js 拉起）",
+    "runtime": "Node 22 + Python 3（本机图像服务 4192）"
+  },
+  "models": {
+    "provider": "hub-prototype",
+    "managedByHub": [
+      "recognition",
+      "discovery"
+    ],
+    "localFallback": [
+      "reconstruction"
+    ],
+    "note": "中枢模型经插件内置的本机回环代理（127.0.0.1:4198）调用，中枢密钥不出插件进程；中枢未分配模型时自动回落到本机管理中心配置。"
+  },
+  "permissions": [
+    "监听本机回环端口：4173（界面）、4191（业务 API）、4193（本机管理中心）、4192（图像服务）、4198（中枢模型代理）",
+    "读写本机目录 local-data（项目、原图、材质成果、加密后的模型密钥）",
+    "调用中枢已授权的模型（材质识别、区域发现）",
+    "调用本机管理中心以维护模型密钥与接口地址"
+  ],
+  "dataBoundary": "原图、Mask、材质贴图只存本机，不主动上传；仅将识别用的裁剪图/正视样本发送给所选模型服务。",
+  "assets": {
+    "icon": "icon-512.png",
+    "iconSource": "icon.svg",
+    "screenshots": [
+      "screenshots/home.png",
+      "screenshots/settings.png"
+    ]
+  },
+  "maintainer": "数字化中心 · 专项组",
+  "support": "内线工单：数字化中心 / 建筑专业应用",
+  "history": [
+    {
+      "version": "0.1.1",
+      "note": "入口改为反代工作台：中枢工作区打开即完整界面；工作台未启动时自动拉起 + 启动页；已提交市场并通过审核"
+    },
+    {
+      "version": "0.1.0",
+      "note": "接入中枢应用市场：识别与区域发现模型改由中枢提供，纹理重绘保留本机配置；模型配置页新增中枢托管只读态"
+    }
+  ],
+  "marketRecord": {
+    "hubId": "<登记号>",
+    "status": "published",
+    "registeredAt": "2026-11-15",
+    "note": "已在本地演示中枢（127.0.0.1:<hub-port>，内存态）完成接入登记并通过审核；正式环境需用本人在中枢的账号重新提交，维护人字段才会落到本人"
+  }
+}

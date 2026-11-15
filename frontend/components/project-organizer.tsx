@@ -1,0 +1,11 @@
+"use client";
+import {useEffect,useId,useRef,useState} from 'react';
+type Folder={id:string;name:string};
+type Action={kind:'folder'|'rename'|'move';id?:string;name?:string;folderId?:string|null};
+export default function ProjectOrganizer({action,folders,onClose,onSave}:{action:Action|null;folders:Folder[];onClose:()=>void;onSave:(value:{name:string;folderId:string|null})=>Promise<void>}){
+ const dialog=useRef<HTMLDialogElement>(null),previous=useRef<HTMLElement|null>(null),heading=useId();const [name,setName]=useState(''),[folderId,setFolderId]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');const lock=useRef(false);
+ useEffect(()=>{if(action){previous.current=document.activeElement as HTMLElement;setName(action.name||'');setFolderId(action.folderId||'');setError('');dialog.current?.showModal();}else{dialog.current?.close();previous.current?.focus();}},[action]);
+ async function submit(e:React.FormEvent){e.preventDefault();if(lock.current)return;lock.current=true;setBusy(true);setError('');try{await onSave({name:name.trim(),folderId:folderId||null});onClose();}catch(e){setError((e as Error).message);}finally{lock.current=false;setBusy(false);}}
+ const title=action?.kind==='folder'?'新建文件夹':action?.kind==='move'?'移动项目':'重命名项目';
+ return <dialog className="organizer-dialog" ref={dialog} aria-labelledby={heading} onCancel={e=>{e.preventDefault();if(!lock.current)onClose();}}><form onSubmit={submit}><h2 id={heading}>{title}</h2>{action?.kind==='move'?<><p>将“{action.name}”整理到指定文件夹，项目内容保持不变。</p><label>目标文件夹<select autoFocus value={folderId} disabled={busy} onChange={e=>setFolderId(e.target.value)}><option value="">未分类</option>{folders.map(f=><option value={f.id} key={f.id}>{f.name}</option>)}</select></label></>:<label>{action?.kind==='folder'?'文件夹名称':'项目名称'}<input autoFocus required maxLength={100} value={name} disabled={busy} onChange={e=>setName(e.target.value)} placeholder={action?.kind==='folder'?'例如：校园项目':'输入项目名称'}/></label>}{error&&<p role="alert" className="retry-error">{error}</p>}<footer><button type="button" className="btn" disabled={busy} onClick={onClose}>取消</button><button className="btn primary" disabled={busy||(action?.kind!=='move'&&!name.trim())}>{busy?'正在保存…':'保存'}</button></footer></form></dialog>;
+}

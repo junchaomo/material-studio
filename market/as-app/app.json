@@ -1,0 +1,58 @@
+{
+  "id": "jg-material-studio",
+  "name": "材质提取",
+  "version": "0.1.1",
+  "runtime": "node",
+  "appDir": ".",
+  "entry": "server.mjs",
+  "health": {
+    "path": "/health"
+  },
+  "assetsDir": "assets",
+  "env": {
+    "MATERIAL_STUDIO_HOME": "D:\\projects\\material-studio"
+  },
+  "permissions": {
+    "localPorts": ["4173", "4191", "4192", "4193", "4198"],
+    "loopbackOnly": true,
+    "filesystem": ["本机 local-data 目录：项目、原图、材质成果、加密后的模型密钥"],
+    "spawn": ["node scripts/launch-local.mjs（启动材质工作台）"],
+    "models": "材质识别与区域发现由企业内部中枢托管，密钥在本机回环代理进程内",
+    "outbound": "仅向中枢授权的模型服务发送识别用的裁剪图/正视样本"
+  },
+  "capabilities": {
+    "tools": [
+      {
+        "name": "material_studio_launch",
+        "description": "启动本机材质工作台（已在运行则直接复用），返回可访问地址",
+        "method": "POST",
+        "path": "/api/launch",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "wait": {
+              "type": "boolean",
+              "description": "是否等待工作台就绪，默认 true"
+            }
+          },
+          "additionalProperties": false
+        },
+        "timeoutMs": 60000,
+        "sideEffect": true
+      }
+    ],
+    "resources": [
+      {
+        "name": "material_studio_status",
+        "description": "读取材质工作台运行状态、访问地址与模型来源（中枢托管/本机配置）",
+        "method": "GET",
+        "path": "/api/status",
+        "inputSchema": {
+          "type": "object",
+          "properties": {}
+        },
+        "timeoutMs": 10000
+      }
+    ]
+  }
+}

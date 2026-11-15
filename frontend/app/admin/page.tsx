@@ -1,0 +1,1 @@
+export default function Admin(){return <main className="auth-page"><section className="auth-box"><h1>本机管理中心</h1><p>管理中心仅允许本机访问，可管理模型配置、查看用量和任务记录。</p><a className="btn primary" href="http://127.0.0.1:4193/">打开本地管理中心</a><a href="/app">返回工作台</a></section></main>;}

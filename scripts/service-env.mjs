@@ -1,0 +1,5 @@
+import {randomBytes} from 'node:crypto';
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+import {parseEnv} from 'node:util';
+export async function backendEnv(){let values={};for(const name of ['.env.local','.env.worker.local'])try{Object.assign(values,parseEnv(await readFile(new URL('../backend/'+name,import.meta.url),'utf8')));}catch(e){if(e.code!=='ENOENT')throw e;}const env={...values,...process.env};if(!env.QMX_CLOUD_WORKER_TOKEN){const dir=new URL('../local-data/',import.meta.url),file=new URL('worker-token.key',dir);await mkdir(dir,{recursive:true});try{await writeFile(file,randomBytes(32).toString('hex'),{flag:'wx',mode:0o600});}catch(e){if(e.code!=='EEXIST')throw e;}env.QMX_CLOUD_WORKER_TOKEN=(await readFile(file,'utf8')).trim();if(!env.QMX_CLOUD_WORKER_TOKEN)throw Error('本机服务凭证为空，请检查 worker-token.key');}return env;}
+export function frontendEnv(){return Object.fromEntries(Object.entries(process.env).filter(([key])=>!/^(SUPABASE_|DASHSCOPE_|QMX_|AI_MODEL_|STRIPE_|OPENAI_|FAL_|DEEPSEEK_)/.test(key)));}
