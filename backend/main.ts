@@ -8,11 +8,14 @@ import {createLocalAdminServer} from './local/admin.mjs';
 process.env.LOCAL_STORAGE_MODE='true';
 export function createApiServer({allowedOrigins=(process.env.FRONTEND_ORIGINS||'http://127.0.0.1:4173,http://localhost:4173').split(',').map(x=>x.trim()).filter(Boolean)}={}){
  const local=createLocalService({directory:process.env.LOCAL_DATA_DIR||path.resolve(process.cwd(),'../local-data')});
+ const isLoopbackOrigin=(value:string)=>{try{const url=new URL(value);return url.protocol==='http:'&&['127.0.0.1','localhost','[::1]','::1'].includes(url.hostname)}catch{return false}};
  const server=createServer(async(req:IncomingMessage,res:ServerResponse)=>{
   if(local&&!localRequestAllowed(req)){res.writeHead(403,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'单机工作台只允许本机访问。'}));return;}
   const origin=req.headers.origin;
   res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
-  if(origin&&!allowedOrigins.includes(origin)){res.writeHead(403,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'来源站点未获允许。'}));return;}
+  // AS Runtime 用随机回环端口托管应用，Origin 不是固定的 4173；单机模式只放行回环 http 来源，
+  // 公网来源仍需显式列入 FRONTEND_ORIGINS。请求仍受 localRequestAllowed 与 Bearer token 双重约束。
+  if(origin&&!allowedOrigins.includes(origin)&&!isLoopbackOrigin(origin)){res.writeHead(403,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'来源站点未获允许。'}));return;}
   if(origin){res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');res.setHeader('Access-Control-Expose-Headers','Content-Disposition');}
   if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Methods':'GET,POST,OPTIONS','Access-Control-Allow-Headers':'Authorization,Content-Type,Idempotency-Key,X-Upload-Token','Access-Control-Max-Age':'600'});res.end();return;}
   try{
