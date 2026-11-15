@@ -1,6 +1,6 @@
 import {spawn,spawnSync} from 'node:child_process';
 import {createConnection} from 'node:net';
-import {openSync,mkdirSync} from 'node:fs';
+import {existsSync,openSync,mkdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {backendEnv,frontendEnv} from './service-env.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
@@ -11,10 +11,18 @@ const env=await backendEnv();Object.assign(env,{APP_MODE:'local',LOCAL_STORAGE_M
 for(const k of Object.keys(env))if(k.startsWith('SUPABASE_'))delete env[k];
 if(!await live(4191)){console.log('正在启动后台…');const b=spawnSync(process.execPath,['backend/build.mjs'],{cwd:root,stdio:'inherit',windowsHide:true});if(b.status!==0)process.exit(1);run('backend',['dist/backend/main.js'],root+'backend',env);}
 if(!await live(4192))run('cpu',['scripts/start-cpu.mjs'],root,env);
-if(!await live(4173))run('frontend',['node_modules/next/dist/bin/next','dev','frontend','--hostname','127.0.0.1','--port','4173'],root,{...frontendEnv(),API_BASE_URL:'http://127.0.0.1:4191'});
+if(!await live(4173)){
+  const frontendBuild=root+'frontend/.next/BUILD_ID';
+  if(!existsSync(frontendBuild)){
+    console.log('正在构建前端生产包…');
+    const b=spawnSync(process.execPath,['node_modules/next/dist/bin/next','build','frontend'],{cwd:root,env:{...frontendEnv(),API_BASE_URL:'http://127.0.0.1:4191'},stdio:'inherit',windowsHide:true});
+    if(b.status!==0)process.exit(1);
+  }
+  run('frontend',['node_modules/next/dist/bin/next','start','frontend','--hostname','127.0.0.1','--port','4173'],root,{...frontendEnv(),API_BASE_URL:'http://127.0.0.1:4191'});
+}
 console.log('正在等待工作台就绪…');
 let ready=false;for(let i=0;i<90;i++){if(await live(4173)&&await live(4191)&&await live(4192)){ready=true;break}await new Promise(r=>setTimeout(r,1000));}
 if(!ready){console.error('服务未能全部启动，请查看 local-data/launcher-*.log。');process.exit(1)}
 try{const r=await fetch('http://127.0.0.1:4173/',{signal:AbortSignal.timeout(60000)});if(!r.ok)throw Error('HTTP '+r.status);}catch(e){console.error('页面尚未就绪：'+e.message);process.exit(1)}
-spawn('explorer.exe',['http://127.0.0.1:4173/'],{detached:true,stdio:'ignore',windowsHide:true}).unref();
+if(!process.env.JG_SUPPRESS_OPEN)spawn('explorer.exe',['http://127.0.0.1:4173/'],{detached:true,stdio:'ignore',windowsHide:true}).unref();
 console.log('工作台已打开，服务在后台运行。');
