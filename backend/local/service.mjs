@@ -167,7 +167,10 @@ export function createLocalService({directory,env=process.env,cpu=null,providers
  async function handle(request,admin=false){
   try{
    const url=new URL(request.url),route=url.pathname,post=request.method==='POST';
-   if(route==='/api/config')return json({configured:true,local:true,token,userId:localOwner,workspaceId:localWorkspace});
+ // 中枢账号门禁：4191 只能被本机工作台进程带内部头访问，直接打开端口拿不到 /api/config 的令牌。
+ const gateSecret=process.env.AS_GATE_INTERNAL||'';
+ if(gateSecret&&route!=='/api/health'&&request.headers.get('x-as-gate')!==gateSecret)return json({error:'请从智能中枢的应用入口打开材质工作台。'},401);
+ if(route==='/api/config')return json({configured:true,local:true,token,userId:localOwner,workspaceId:localWorkspace,dataDir:store.directory,gate:Boolean(gateSecret)});
    if(route==='/api/health')return json({ok:true,architecture:'separated',mode:'local',database:'sqlite'});
    if(route==='/api/community/featured')return json({available:false,cases:[]});
    if(/^\/api\/local\/files\/[^/]+$/.test(route)&&request.method==='GET'){const a=asset(route.split('/').at(-1));return new Response(await readFile(store.file(a.id)),{headers:{'Content-Type':'image/png','Cache-Control':'private, no-store','Cross-Origin-Resource-Policy':'same-origin'}});}
